@@ -9,32 +9,23 @@
 
 namespace reactor
 {
-	template<typename T>
 	class reactor_coroutine;
 
 	namespace detail
 	{
-		template<typename T>
 		class reactor_coroutine_promise
 		{
 		public:
-
-			using value_type = std::remove_reference_t<T>;
-			using reference_type = std::conditional_t<std::is_reference_v<T>, T, T&>;
-			using pointer_type = value_type * ;
-
 			reactor_coroutine_promise() = default;
 
-			reactor_coroutine<T> get_return_object() noexcept;
+			reactor_coroutine get_return_object() noexcept;
 
 			constexpr std::experimental::suspend_always initial_suspend() const 
 			{ 
-				std::cout << "Initial suspend" << std::endl;
 				return {}; 
 			}
 			constexpr std::experimental::suspend_always final_suspend() const 
 			{
-				std::cout << "Final suspend" << std::endl;
 				return {};
 			}
 
@@ -48,32 +39,17 @@ namespace reactor
 				return {};
 			}
 
-			std::experimental::suspend_always yield_value(T&& value) noexcept
-			{
-				std::cout << "Yield value " << value << std::endl;
-
-				m_value = std::addressof(value);
-				return {};
-			}
 
 			void unhandled_exception()
 			{
 				std::cout << "Exception " << std::endl;
 
-				m_value = nullptr;
 				m_exception = std::current_exception();
 			}
 
 			void return_void()
 			{
 				std::cout << "Return void " << std::endl;
-
-				m_value = nullptr;
-			}
-
-			reference_type value() const noexcept
-			{
-				return *m_value;
 			}
 
 			/*
@@ -95,19 +71,17 @@ namespace reactor
 
 		private:
 
-			pointer_type m_value;
 			std::exception_ptr m_exception;
 
 		};
 	}
 
 	// A coroutine that is handled by scheduler
-	template<typename T>
 	class reactor_coroutine
 	{
 	public:
 
-		using promise_type = detail::reactor_coroutine_promise<T>;
+		using promise_type = detail::reactor_coroutine_promise;
 
 		reactor_coroutine() noexcept
 			: m_coroutine(nullptr)
@@ -157,7 +131,7 @@ namespace reactor
 		}
 	private:
 
-		friend class detail::reactor_coroutine_promise<T>;
+		friend class detail::reactor_coroutine_promise;
 
 		explicit reactor_coroutine(std::experimental::coroutine_handle<promise_type> coroutine) noexcept
 			: m_coroutine(coroutine)
@@ -166,19 +140,17 @@ namespace reactor
 		std::experimental::coroutine_handle<promise_type> m_coroutine;
 	};
 
-	template<typename T>
-	void swap(reactor_coroutine<T>& a, reactor_coroutine<T>& b)
+	void swap(reactor_coroutine& a, reactor_coroutine& b)
 	{
 		a.swap(b);
 	}
 
 	namespace detail
 	{
-		template<typename T>
-		reactor_coroutine<T> reactor_coroutine_promise<T>::get_return_object() noexcept
+		reactor_coroutine reactor_coroutine_promise::get_return_object() noexcept
 		{
-			using coroutine_handle = std::experimental::coroutine_handle<reactor_coroutine_promise<T>>;
-			return reactor_coroutine<T>{ coroutine_handle::from_promise(*this) };
+			using coroutine_handle = std::experimental::coroutine_handle<reactor_coroutine_promise>;
+			return reactor_coroutine{ coroutine_handle::from_promise(*this) };
 		}
 	}
 }

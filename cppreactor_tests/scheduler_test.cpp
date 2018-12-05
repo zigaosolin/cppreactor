@@ -6,29 +6,21 @@
 
 using namespace reactor;
 
-reactor_coroutine<float> coroutine2()
-{
-	co_yield 2.0f;
-}
 
-reactor_coroutine<float> coroutine1()
+reactor_coroutine coroutine1(scheduler& s)
 {
-	co_await next_frame{};
-	co_yield 3.0f;
-	//co_yield 5.0f;
+	co_await next_frame{s};
 }
 
 TEST_CASE("Coroutine is updated", "[reactor_coroutine]") {
 
 	std::cout << "Starting" << std::endl;
-	auto coroutine = coroutine1();
 
-	bool notDone = coroutine.update(0.1f);
-	REQUIRE(notDone == true);
-	notDone = coroutine.update(0.1f);
-	REQUIRE(notDone == true);
-	notDone = coroutine.update(0.1f);
-	REQUIRE(notDone == true);
-	notDone = coroutine.update(0.1f);
-	REQUIRE(notDone == false);
+	scheduler s;
+	auto c = coroutine1(s);
+
+	s.enqueue(c);
+
+	s.update(0.1f);
+
 }
