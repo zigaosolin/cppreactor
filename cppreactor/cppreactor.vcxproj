@@ -120,6 +120,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="reactor_coroutine.hpp" />
+    <ClInclude Include="reactor_scheduler.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="reactor.cpp" />

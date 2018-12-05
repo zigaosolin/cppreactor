@@ -1,6 +1,7 @@
 #ifndef REACTOR_COROUTINE_HPP_INCLUDED
 #define REACTOR_COROUTINE_HPP_INCLUDED
 
+#include <iostream>
 #include <experimental/coroutine>
 #include <type_traits>
 #include <utility>
@@ -26,32 +27,47 @@ namespace reactor
 
 			reactor_coroutine<T> get_return_object() noexcept;
 
-			constexpr std::experimental::suspend_always initial_suspend() const { return {}; }
-			constexpr std::experimental::suspend_always final_suspend() const { return {}; }
+			constexpr std::experimental::suspend_always initial_suspend() const 
+			{ 
+				std::cout << "Initial suspend" << std::endl;
+				return {}; 
+			}
+			constexpr std::experimental::suspend_always final_suspend() const 
+			{
+				std::cout << "Final suspend" << std::endl;
+				return {};
+			}
 
 			template<
 				typename U,
 				typename = std::enable_if_t<std::is_same<U, T>::value>>
 				std::experimental::suspend_always yield_value(U& value) noexcept
 			{
+				std::cout << "Yield value<U,U> " << value << std::endl;
 				m_value = std::addressof(value);
 				return {};
 			}
 
 			std::experimental::suspend_always yield_value(T&& value) noexcept
 			{
+				std::cout << "Yield value " << value << std::endl;
+
 				m_value = std::addressof(value);
 				return {};
 			}
 
 			void unhandled_exception()
 			{
+				std::cout << "Exception " << std::endl;
+
 				m_value = nullptr;
 				m_exception = std::current_exception();
 			}
 
 			void return_void()
 			{
+				std::cout << "Return void " << std::endl;
+
 				m_value = nullptr;
 			}
 
@@ -60,9 +76,14 @@ namespace reactor
 				return *m_value;
 			}
 
-			// Don't allow any use of 'co_await' inside the coroutine.
+			/*
 			template<typename U>
-			std::experimental::suspend_never await_transform(U&& value) = delete;
+			std::experimental::suspend_always await_transform(U&& value)
+			{
+				std::cout << "Await transform " << std::endl;
+
+				return value;
+			}*/
 
 			void rethrow_if_exception()
 			{
