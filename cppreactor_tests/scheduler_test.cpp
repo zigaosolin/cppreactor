@@ -7,12 +7,12 @@
 using namespace reactor;
 
 
-reactor_coroutine coroutine1(scheduler& s)
+reactor_coroutine coroutine1()
 {
 	std::cout << "1" << std::endl;
-	co_await next_frame{ s };
+	float dt = co_await next_frame{};
 	std::cout << "2" << std::endl;
-	co_await next_frame{ s };
+	dt = co_await next_frame{};
 	std::cout << "3" << std::endl;
 }
 
@@ -20,8 +20,8 @@ TEST_CASE("Coroutine is updated", "[reactor_coroutine]") {
 
 	std::cout << "Starting" << std::endl;
 
-	scheduler s;
-	auto c = coroutine1(s);
+	reactor_scheduler s;
+	auto c = coroutine1();
 
 	std::cout << "a" << std::endl;
 	s.enqueue(c);
