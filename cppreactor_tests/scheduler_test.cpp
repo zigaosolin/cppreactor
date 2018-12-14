@@ -49,7 +49,7 @@ TEST_CASE("Coroutine speed", "[reactor_coroutine]") {
 
 	auto start = std::chrono::high_resolution_clock::now();
 
-	const int loops = 100000;
+	const int loops = 500000;
 	for (int i = 0; i < loops; i++)
 	{
 		s.update_next_frame(0.01f);
@@ -65,7 +65,8 @@ TEST_CASE("Coroutine speed", "[reactor_coroutine]") {
 	const int expectedMinUpdates = 1000000; // The number is actually 80M on my comp
 #endif
 
-	REQUIRE( (loops / duration.count()) > expectedMinUpdates);
+	auto updates_per_second = loops / duration.count();
 
-
+	std::cout << "Coroutines updates " << updates_per_second / 1000000 << "M/s" << std::endl;
+	REQUIRE(updates_per_second > expectedMinUpdates);
 }

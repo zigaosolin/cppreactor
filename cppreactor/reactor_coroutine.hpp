@@ -1,7 +1,6 @@
 #ifndef REACTOR_COROUTINE_HPP_INCLUDED
 #define REACTOR_COROUTINE_HPP_INCLUDED
 
-#include <iostream>
 #include <experimental/coroutine>
 #include <type_traits>
 #include <utility>
