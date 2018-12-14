@@ -38,7 +38,7 @@ namespace reactor
 				typename = std::enable_if_t<std::is_same<U, T>::value>>
 				std::experimental::suspend_always yield_value(U& value) noexcept
 			{
-				std::cout << "Yield value<U,U> " << value << std::endl;
+				//std::cout << "Yield value<U,U> " << value << std::endl;
 				m_value = std::addressof(value);
 				return {};
 			}
@@ -46,20 +46,20 @@ namespace reactor
 
 			void unhandled_exception()
 			{
-				std::cout << "Exception " << std::endl;
+				//std::cout << "Exception " << std::endl;
 
 				m_exception = std::current_exception();
 			}
 
 			void return_void()
 			{
-				std::cout << "Return void " << std::endl;
+				//std::cout << "Return void " << std::endl;
 			}
 
 			template<typename U>
 			std::experimental::suspend_always await_transform(U&& value)
 			{
-				std::cout << "Await transform " << std::endl;
+				//std::cout << "Await transform " << std::endl;
 
 				return value;
 			}
@@ -121,8 +121,6 @@ namespace reactor
 			std::swap(m_coroutine, other.m_coroutine);
 		}
 
-		next_frame next_frame() noexcept;
-
 	private:
 
 		friend class detail::reactor_coroutine_promise;
@@ -161,16 +159,10 @@ namespace reactor
 	class reactor_scheduler
 	{
 	public:
-		void update(float frame_data)
+		void update_next_frame(float frame_data)
 		{		
 			// Sets current frame data, members with access can return it
 			m_frame_data = frame_data;
-
-			for (auto& start_coroutine : m_start_coroutines)
-			{
-				start_coroutine->update_next_frame(frame_data);
-			}
-			m_start_coroutines.clear();
 
 			m_frames.swap();
 
@@ -180,12 +172,21 @@ namespace reactor
 			}
 
 			m_frames.front().clear();
+
+			// We start all coroutines right after updates
+			m_start_coroutines.swap();
+
+			for (auto& start_coroutine : m_start_coroutines.front())
+			{
+				start_coroutine->update_next_frame(frame_data);
+			}
+			m_start_coroutines.front().clear();
 		}
 
-		void enqueue(reactor_coroutine& coroutine)
+		void push(reactor_coroutine& coroutine)
 		{
 			coroutine.schedule(*this);
-			m_start_coroutines.push_back(&coroutine);
+			m_start_coroutines.back().push_back(&coroutine);
 		}
 
 	private:
@@ -196,33 +197,40 @@ namespace reactor
 			m_frames.back().push_back(handle);
 		}
 
+		template <class D>
 		struct double_buffer
 		{
-			bool m_frame1_front = false;
-			std::vector<std::experimental::coroutine_handle<> > m_next_frame1;
-			std::vector<std::experimental::coroutine_handle<> > m_next_frame2;
+			std::vector<D>* m_front;
+			std::vector<D>* m_back;
 
-			std::vector<std::experimental::coroutine_handle<> >& front()
+			std::vector<D> m_next_frame1;
+			std::vector<D> m_next_frame2;
+
+			double_buffer()
 			{
-				return m_frame1_front ? m_next_frame1 : m_next_frame2;
+				m_front = &m_next_frame1;
+				m_back = &m_next_frame2;
 			}
 
-			std::vector<std::experimental::coroutine_handle<> >& back()
+			std::vector<D>& front()
 			{
-				return m_frame1_front ? m_next_frame2 : m_next_frame1;
+				return *m_front;
+			}
+
+			std::vector<D>& back()
+			{
+				return *m_back;
 			}
 
 			void swap()
 			{
-				m_frame1_front = !m_frame1_front;
+				std::swap(m_front, m_back);
 			}
 		};
 
-		double_buffer m_frames;
-		std::vector<reactor_coroutine*> m_start_coroutines;
+		double_buffer<std::experimental::coroutine_handle<> > m_frames;
+		double_buffer<reactor_coroutine*> m_start_coroutines;
 		float m_frame_data;
-
-
 	};
 
 	class next_frame
@@ -236,13 +244,13 @@ namespace reactor
 
 		bool await_ready() const noexcept
 		{
-			std::cout << "Await ready" << std::endl;
+			//std::cout << "Await ready" << std::endl;
 			return false;
 		}
 
 		bool await_suspend(std::experimental::coroutine_handle<> awaitingCoroutine)
 		{
-			std::cout << "Await suspend" << std::endl;
+			//std::cout << "Await suspend" << std::endl;
 			m_awaitingCoroutine = awaitingCoroutine;
 			m_scheduler->enqueue_update(m_awaitingCoroutine);
 			return true;
@@ -250,7 +258,7 @@ namespace reactor
 
 		decltype(auto) await_resume()
 		{
-			std::cout << "Await resume" << std::endl;
+			//std::cout << "Await resume" << std::endl;
 			return m_scheduler->m_frame_data;
 		}
 

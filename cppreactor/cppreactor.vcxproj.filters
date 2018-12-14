@@ -23,8 +23,5 @@
     <ClInclude Include="reactor_coroutine.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="reactor_scheduler.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
   </ItemGroup>
 </Project>
