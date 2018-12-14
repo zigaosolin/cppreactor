@@ -5,16 +5,13 @@
 
 using namespace reactor;
 
-
 reactor_coroutine<> single_co_await(int& iteration)
 {
 	iteration = 0;
-	float dt = co_await next_frame{};
+	auto frame_data = co_await next_frame{};
 	iteration = 1;
-	REQUIRE(dt == 0.1f);
-
+	REQUIRE(frame_data.delta_time == 0.1f);
 }
-
 
 TEST_CASE("Coroutine is updated", "[reactor_coroutine]") {
 
@@ -28,22 +25,85 @@ TEST_CASE("Coroutine is updated", "[reactor_coroutine]") {
 	REQUIRE(iteration == -1);
 
 	// First update starts it
-	s.update_next_frame(0.05f);
+	s.update_next_frame(reactor_default_frame_data{ 0.05f });
 	REQUIRE(iteration == 0);
 
-	s.update_next_frame(0.1f);
+	s.update_next_frame(reactor_default_frame_data{ 0.1f });
 	REQUIRE(iteration == 1);
 }
 
-reactor_coroutine<> infinite_frames()
+reactor_coroutine<float> single_co_await_float(int& iteration)
+{
+	iteration = 0;
+	auto frame_data = co_await next_frame<float>{};
+	iteration = 1;
+	REQUIRE(frame_data == 0.1f);
+}
+
+TEST_CASE("Coroutine non-default data", "[reactor_coroutine]") {
+
+	reactor_scheduler<float> s;
+	int iteration = -1;
+
+	// Call or push do not start it yet
+	auto c = single_co_await_float(iteration);
+	REQUIRE(iteration == -1);
+	s.push(c);
+	REQUIRE(iteration == -1);
+
+	// First update starts it
+	s.update_next_frame( 0.05f );
+	REQUIRE(iteration == 0);
+
+	s.update_next_frame( 0.1f );
+	REQUIRE(iteration == 1);
+}
+
+struct big_frame_struct
+{
+	float data1;
+	int data[100];
+};
+
+reactor_coroutine<big_frame_struct*> single_co_await_big(int& iteration)
+{
+	iteration = 0;
+	auto frame_data = co_await next_frame<big_frame_struct*>{};
+	iteration = 1;
+	REQUIRE(frame_data->data1 == 0.1f);
+}
+
+TEST_CASE("Coroutine frame data by ref", "[reactor_coroutine]") {
+
+	big_frame_struct frame_data{ 0.05f };
+
+	reactor_scheduler<big_frame_struct*> s;
+	int iteration = -1;
+
+	// Call or push do not start it yet
+	auto c = single_co_await_big(iteration);
+	REQUIRE(iteration == -1);
+	s.push(c);
+	REQUIRE(iteration == -1);
+
+	// First update starts it
+	s.update_next_frame(&frame_data);
+	REQUIRE(iteration == 0);
+
+	frame_data.data1 = 0.1f;
+	s.update_next_frame(&frame_data);
+	REQUIRE(iteration == 1);
+}
+
+reactor_coroutine<float> infinite_frames()
 {
 	for (;;)
-		co_await next_frame{};
+		co_await next_frame<float>{};
 }
 
 TEST_CASE("Coroutine speed", "[reactor_coroutine]") {
 
-	reactor_scheduler<> s;
+	reactor_scheduler<float> s;
 	auto c = infinite_frames();
 	s.push(c);
 

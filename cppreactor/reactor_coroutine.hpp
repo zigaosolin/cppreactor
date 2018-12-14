@@ -8,24 +8,24 @@
 
 namespace reactor
 {
-	struct frame_data
+	struct reactor_default_frame_data
 	{
 		float delta_time;
 	};
 
-	template <class T = frame_data>
+	template <class T = reactor_default_frame_data>
 	class reactor_scheduler;
 
-	template <class T = frame_data>
+	template <class T = reactor_default_frame_data>
 	class reactor_coroutine;
 
-	template <class T = frame_data>
+	template <class T = reactor_default_frame_data>
 	class next_frame;
 
 
 	namespace detail
 	{
-		template <class T = frame_data>
+		template <class T = reactor_default_frame_data>
 		class reactor_coroutine_promise
 		{
 		public:
@@ -147,7 +147,7 @@ namespace reactor
 			p.m_scheduler = &scheduler;
 		}
 
-		bool update_next_frame(float data)
+		bool update_next_frame()
 		{
 			if (m_coroutine)
 			{
@@ -170,10 +170,10 @@ namespace reactor
 	class reactor_scheduler
 	{
 	public:
-		void update_next_frame(float frame_data)
+		void update_next_frame(T reactor_default_frame_data)
 		{		
 			// Sets current frame data, members with access can return it
-			m_frame_data = frame_data;
+			m_reactor_default_frame_data = reactor_default_frame_data;
 
 			m_frames.swap();
 
@@ -189,7 +189,7 @@ namespace reactor
 
 			for (auto& start_coroutine : m_start_coroutines.front())
 			{
-				start_coroutine->update_next_frame(frame_data);
+				start_coroutine->update_next_frame();
 			}
 			m_start_coroutines.front().clear();
 		}
@@ -241,7 +241,8 @@ namespace reactor
 
 		double_buffer<std::experimental::coroutine_handle<> > m_frames;
 		double_buffer<reactor_coroutine<T>*> m_start_coroutines;
-		float m_frame_data;
+		
+		T m_reactor_default_frame_data;
 	};
 
 	template <class T>
@@ -256,13 +257,11 @@ namespace reactor
 
 		bool await_ready() const noexcept
 		{
-			//std::cout << "Await ready" << std::endl;
 			return false;
 		}
 
 		bool await_suspend(std::experimental::coroutine_handle<> awaitingCoroutine)
 		{
-			//std::cout << "Await suspend" << std::endl;
 			m_awaitingCoroutine = awaitingCoroutine;
 			m_scheduler->enqueue_update(m_awaitingCoroutine);
 			return true;
@@ -270,8 +269,7 @@ namespace reactor
 
 		decltype(auto) await_resume()
 		{
-			//std::cout << "Await resume" << std::endl;
-			return m_scheduler->m_frame_data;
+			return m_scheduler->m_reactor_default_frame_data;
 		}
 
 	private:
@@ -284,7 +282,7 @@ namespace reactor
 
 
 
-	template <class T = frame_data>
+	template <class T = reactor_default_frame_data>
 	void swap(reactor_coroutine<T>& a, reactor_coroutine<T>& b)
 	{
 		a.swap(b);
