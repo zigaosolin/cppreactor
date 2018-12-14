@@ -6,7 +6,7 @@
 using namespace reactor;
 
 
-reactor_coroutine single_co_await(int& iteration)
+reactor_coroutine<> single_co_await(int& iteration)
 {
 	iteration = 0;
 	float dt = co_await next_frame{};
@@ -18,7 +18,7 @@ reactor_coroutine single_co_await(int& iteration)
 
 TEST_CASE("Coroutine is updated", "[reactor_coroutine]") {
 
-	reactor_scheduler s;
+	reactor_scheduler<> s;
 	int iteration = -1;
 
 	// Call or push do not start it yet
@@ -35,7 +35,7 @@ TEST_CASE("Coroutine is updated", "[reactor_coroutine]") {
 	REQUIRE(iteration == 1);
 }
 
-reactor_coroutine infinite_frames()
+reactor_coroutine<> infinite_frames()
 {
 	for (;;)
 		co_await next_frame{};
@@ -43,7 +43,7 @@ reactor_coroutine infinite_frames()
 
 TEST_CASE("Coroutine speed", "[reactor_coroutine]") {
 
-	reactor_scheduler s;
+	reactor_scheduler<> s;
 	auto c = infinite_frames();
 	s.push(c);
 

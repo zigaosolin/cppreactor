@@ -9,20 +9,30 @@
 
 namespace reactor
 {
+	struct frame_data
+	{
+		float delta_time;
+	};
 
+	template <class T = frame_data>
 	class reactor_scheduler;
+
+	template <class T = frame_data>
 	class reactor_coroutine;
+
+	template <class T = frame_data>
 	class next_frame;
 
 
 	namespace detail
 	{
+		template <class T = frame_data>
 		class reactor_coroutine_promise
 		{
 		public:
 			reactor_coroutine_promise() = default;
 
-			reactor_coroutine get_return_object() noexcept;
+			reactor_coroutine<T> get_return_object() noexcept;
 
 			constexpr std::experimental::suspend_always initial_suspend() const
 			{
@@ -64,7 +74,7 @@ namespace reactor
 				return value;
 			}
 
-			next_frame await_transform(next_frame&& awaitable);
+			next_frame<T> await_transform(next_frame<T>&& awaitable);
 
 			void rethrow_if_exception()
 			{
@@ -75,20 +85,21 @@ namespace reactor
 			}
 
 		private:
-			friend class reactor_coroutine;
+			friend class reactor_coroutine<T>;
 
-			reactor_scheduler* m_scheduler;
+			reactor_scheduler<T>* m_scheduler;
 			std::exception_ptr m_exception;
 
 		};
 	}
 
 
+	template <class T>
 	class reactor_coroutine
 	{
 	public:
 
-		using promise_type = detail::reactor_coroutine_promise;
+		using promise_type = detail::reactor_coroutine_promise<T>;
 
 		reactor_coroutine() noexcept
 			: m_coroutine(nullptr)
@@ -123,14 +134,14 @@ namespace reactor
 
 	private:
 
-		friend class detail::reactor_coroutine_promise;
-		friend class reactor_scheduler;
+		friend class detail::reactor_coroutine_promise<T>;
+		friend class reactor_scheduler<T>;
 
 		explicit reactor_coroutine(std::experimental::coroutine_handle<promise_type> coroutine) noexcept
 			: m_coroutine(coroutine)
 		{}
 
-		void schedule(reactor_scheduler& scheduler)
+		void schedule(reactor_scheduler<T>& scheduler)
 		{
 			auto& p = m_coroutine.promise();
 			assert(p.m_scheduler == nullptr);
@@ -156,6 +167,7 @@ namespace reactor
 		std::experimental::coroutine_handle<promise_type> m_coroutine;
 	};
 
+	template <class T>
 	class reactor_scheduler
 	{
 	public:
@@ -183,14 +195,14 @@ namespace reactor
 			m_start_coroutines.front().clear();
 		}
 
-		void push(reactor_coroutine& coroutine)
+		void push(reactor_coroutine<T>& coroutine)
 		{
 			coroutine.schedule(*this);
 			m_start_coroutines.back().push_back(&coroutine);
 		}
 
 	private:
-		friend class next_frame;
+		friend class next_frame<T>;
 
 		void enqueue_update(std::experimental::coroutine_handle<> handle)
 		{
@@ -229,10 +241,11 @@ namespace reactor
 		};
 
 		double_buffer<std::experimental::coroutine_handle<> > m_frames;
-		double_buffer<reactor_coroutine*> m_start_coroutines;
+		double_buffer<reactor_coroutine<T>*> m_start_coroutines;
 		float m_frame_data;
 	};
 
+	template <class T>
 	class next_frame
 	{
 
@@ -263,31 +276,32 @@ namespace reactor
 		}
 
 	private:
-		friend class detail::reactor_coroutine_promise;
+		friend class detail::reactor_coroutine_promise<T>;
 
 		std::experimental::coroutine_handle<> m_awaitingCoroutine;
-		reactor_scheduler* m_scheduler;
+		reactor_scheduler<T>* m_scheduler;
 
 	};
 
 
 
-
-	void swap(reactor_coroutine& a, reactor_coroutine& b)
+	template <class T = frame_data>
+	void swap(reactor_coroutine<T>& a, reactor_coroutine<T>& b)
 	{
 		a.swap(b);
 	}
 
 	namespace detail
 	{
-
-		reactor_coroutine reactor_coroutine_promise::get_return_object() noexcept
+		template <class T>
+		reactor_coroutine<T> reactor_coroutine_promise<T>::get_return_object() noexcept
 		{
-			using coroutine_handle = std::experimental::coroutine_handle<reactor_coroutine_promise>;
+			using coroutine_handle = std::experimental::coroutine_handle<reactor_coroutine_promise<T> >;
 			return reactor_coroutine{ coroutine_handle::from_promise(*this) };
 		}
 
-		next_frame reactor_coroutine_promise::await_transform(next_frame&& awaitable)
+		template <class T>
+		next_frame<T> reactor_coroutine_promise<T>::await_transform(next_frame<T>&& awaitable)
 		{
 			assert(m_scheduler != nullptr);
 			awaitable.m_scheduler = m_scheduler;
