@@ -130,3 +130,32 @@ TEST_CASE("Coroutine speed", "[reactor_coroutine]") {
 	std::cout << "Coroutines updates " << updates_per_second / 1000000 << "M/s" << std::endl;
 	REQUIRE(updates_per_second > expectedMinUpdates);
 }
+
+
+reactor_coroutine<> nested_coroutine(int& data)
+{
+	co_await next_frame{};
+
+	if (data == 3)
+		co_return;
+	data++;
+	co_await nested_coroutine(data);
+}
+
+TEST_CASE("Coroutine nesting", "[reactor_coroutine]") {
+
+	reactor_scheduler<> s;
+	int data = 0;
+	auto c = nested_coroutine(data);
+	s.push(c);
+
+	REQUIRE(data == 0);
+	s.update_next_frame(reactor_default_frame_data{ 0.01f });
+	REQUIRE(data == 0);
+	s.update_next_frame(reactor_default_frame_data{ 0.01f });
+	REQUIRE(data == 1);
+	s.update_next_frame(reactor_default_frame_data{ 0.01f });
+	REQUIRE(data == 2);
+	s.update_next_frame(reactor_default_frame_data{ 0.01f });
+	REQUIRE(data == 3);
+}

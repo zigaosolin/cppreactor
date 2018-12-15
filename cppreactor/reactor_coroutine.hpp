@@ -25,6 +25,9 @@ namespace cppcoro
 
 	namespace detail
 	{
+		template <class T>
+		class coroutine_awaitable;
+
 		template <class T = reactor_default_frame_data>
 		class reactor_coroutine_promise
 		{
@@ -47,7 +50,6 @@ namespace cppcoro
 				typename = std::enable_if_t<std::is_same<U, T>::value>>
 				std::experimental::suspend_always yield_value(U& value) noexcept
 			{
-				//std::cout << "Yield value<U,U> " << value << std::endl;
 				m_value = std::addressof(value);
 				return {};
 			}
@@ -55,25 +57,21 @@ namespace cppcoro
 
 			void unhandled_exception()
 			{
-				//std::cout << "Exception " << std::endl;
-
 				m_exception = std::current_exception();
 			}
 
 			void return_void()
 			{
-				//std::cout << "Return void " << std::endl;
 			}
 
 			template<typename U>
 			std::experimental::suspend_always await_transform(U&& value)
 			{
-				//std::cout << "Await transform " << std::endl;
-
 				return value;
 			}
 
 			next_frame<T> await_transform(next_frame<T>&& awaitable);
+			coroutine_awaitable<T> await_transform(reactor_coroutine<T>&& awaitable);
 
 			void rethrow_if_exception()
 			{
@@ -129,6 +127,27 @@ namespace cppcoro
 		void swap(reactor_coroutine& other) noexcept
 		{
 			std::swap(m_coroutine, other.m_coroutine);
+		}
+
+		bool await_ready() const noexcept
+		{
+			return false;
+		}
+
+		bool await_suspend(std::experimental::coroutine_handle<> awaitingCoroutine)
+		{
+			/*
+			auto& p = m_coroutine.promise();
+			assert(p.m_scheduler == nullptr);
+			p.m_scheduler = &scheduler;
+
+			m_scheduler->enqueue_update(m_awaitingCoroutine);*/
+			return true;
+		}
+
+		decltype(auto) await_resume()
+		{
+			return false; // m_scheduler->m_reactor_default_frame_data;
 		}
 
 	private:
@@ -202,6 +221,13 @@ namespace cppcoro
 
 	private:
 		friend class next_frame<T>;
+		friend class detail::coroutine_awaitable<T>;
+
+		bool push_and_update_inplace(reactor_coroutine<T>& coroutine)
+		{
+			coroutine.schedule(*this);
+			return coroutine.update_next_frame();
+		}
 
 		void enqueue_update(std::experimental::coroutine_handle<> handle)
 		{
@@ -280,6 +306,40 @@ namespace cppcoro
 
 	};
 
+	namespace detail
+	{
+		template <class T>
+		class coroutine_awaitable
+		{
+
+		public:
+			coroutine_awaitable(reactor_scheduler<T>& scheduler, reactor_coroutine<T>& coroutine)
+				: m_scheduler(&scheduler), m_coroutine(coroutine)
+			{
+			}
+
+			bool await_ready() const noexcept
+			{
+				return false;
+			}
+
+			bool await_suspend(std::experimental::coroutine_handle<> awaitingCoroutine)
+			{
+				return m_scheduler->push_and_update_inplace(m_coroutine);
+			}
+
+			decltype(auto) await_resume()
+			{
+				return;
+			}
+
+		private:
+			reactor_coroutine<T>& m_coroutine;
+			reactor_scheduler<T>* m_scheduler;
+
+		};
+	}
+
 
 
 	template <class T = reactor_default_frame_data>
@@ -304,6 +364,13 @@ namespace cppcoro
 			awaitable.m_scheduler = m_scheduler;
 
 			return awaitable;
+		}
+
+		template <class T>
+		coroutine_awaitable<T> reactor_coroutine_promise<T>::await_transform(reactor_coroutine<T>&& awaitable)
+		{
+			assert(m_scheduler != nullptr);			
+			return coroutine_awaitable{ *m_scheduler, awaitable };
 		}
 	}
 }
