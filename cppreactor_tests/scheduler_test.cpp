@@ -3,7 +3,7 @@
 #include <chrono>
 #include <reactor_coroutine.hpp>
 
-using namespace reactor;
+using namespace cppcoro;
 
 reactor_coroutine<> single_co_await(int& iteration)
 {

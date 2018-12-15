@@ -6,7 +6,7 @@
 #include <utility>
 #include <exception>
 
-namespace reactor
+namespace cppcoro
 {
 	struct reactor_default_frame_data
 	{
