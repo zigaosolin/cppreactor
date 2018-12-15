@@ -162,7 +162,9 @@ namespace cppcoro
 		void schedule(reactor_scheduler<T>& scheduler)
 		{
 			auto& p = m_coroutine.promise();
-			assert(p.m_scheduler == nullptr);
+
+			// False means that coroutine was already scheduled by something else, not permited in this model due to efficiency
+			assert(p.m_scheduler == nullptr); 
 			p.m_scheduler = &scheduler;
 		}
 
