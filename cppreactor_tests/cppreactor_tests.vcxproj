@@ -125,7 +125,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="main_test.cpp" />
-    <ClCompile Include="scheduler_test.cpp" />
+    <ClCompile Include="reactor_coroutine_test.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\cppreactor\cppreactor.vcxproj">
