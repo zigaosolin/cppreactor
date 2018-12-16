@@ -317,5 +317,3 @@ TEST_CASE("Coroutine throws exception inside", "[reactor_coroutine]") {
 
 	REQUIRE(caught == true);
 }
-
-// TODO: exceptions
