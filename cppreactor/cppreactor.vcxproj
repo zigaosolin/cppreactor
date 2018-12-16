@@ -121,9 +121,6 @@
   <ItemGroup>
     <ClInclude Include="reactor_coroutine.hpp" />
   </ItemGroup>
-  <ItemGroup>
-    <ClCompile Include="reactor.cpp" />
-  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

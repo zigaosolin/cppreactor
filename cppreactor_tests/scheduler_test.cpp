@@ -6,17 +6,18 @@
 using namespace cppcoro;
 
 
-reactor_coroutine<> single_co_await(int& iteration)
+
+reactor_coroutine<float> single_co_await(int& iteration)
 {
 	iteration = 0;
-	auto frame_data = co_await next_frame{};
+	auto frame_data = co_await next_frame<float>{};
 	iteration = 1;
-	REQUIRE(frame_data.delta_time == 0.1f);
+	REQUIRE(frame_data == 0.1f);
 }
 
 TEST_CASE("Coroutine is updated", "[reactor_coroutine]") {
 
-	reactor_scheduler<> s;
+	reactor_scheduler<float> s;
 	int iteration = -1;
 
 	// Call or push do not start it yet
@@ -26,10 +27,10 @@ TEST_CASE("Coroutine is updated", "[reactor_coroutine]") {
 	REQUIRE(iteration == -1);
 
 	// First update starts it
-	s.update_next_frame(reactor_default_frame_data{ 0.05f });
+	s.update_next_frame(0.05f);
 	REQUIRE(iteration == 0);
 
-	s.update_next_frame(reactor_default_frame_data{ 0.1f });
+	s.update_next_frame(0.1f);
 	REQUIRE(iteration == 1);
 }
 
@@ -150,13 +151,13 @@ TEST_CASE("Coroutine nesting", "[reactor_coroutine]") {
 	s.push(c);
 
 	REQUIRE(data == 0);
-	s.update_next_frame(reactor_default_frame_data{ 0.01f });
+	s.update_next_frame(reactor_default_frame_data{});
 	REQUIRE(data == 0);
-	s.update_next_frame(reactor_default_frame_data{ 0.01f });
+	s.update_next_frame(reactor_default_frame_data{});
 	REQUIRE(data == 1);
-	s.update_next_frame(reactor_default_frame_data{ 0.01f });
+	s.update_next_frame(reactor_default_frame_data{});
 	REQUIRE(data == 2);
-	s.update_next_frame(reactor_default_frame_data{ 0.01f });
+	s.update_next_frame(reactor_default_frame_data{});
 	REQUIRE(data == 3);
 }
 
@@ -194,7 +195,7 @@ TEST_CASE("Coroutine multiple levels", "[reactor_coroutine]") {
 
 	for (int i = 0; i < 10; i++)
 	{
-		s.update_next_frame(reactor_default_frame_data{ 0.01f });
+		s.update_next_frame(reactor_default_frame_data{ });
 	}
 	REQUIRE(finished == true);
 }
@@ -227,7 +228,7 @@ TEST_CASE("Coroutine return value", "[reactor_coroutine]") {
 	s.push(c);
 
 	// Whole updat ein one frame since no frame suspensions
-	s.update_next_frame(reactor_default_frame_data{ 0.01f });
+	s.update_next_frame(reactor_default_frame_data{});
 	REQUIRE(data >= 100.0);
 }
 
@@ -262,7 +263,7 @@ TEST_CASE("Coroutine return value suspended return", "[reactor_coroutine]") {
 	// Whole updat ein one frame since no frame suspensions
 	for (int i = 0; i < 101; i++)
 	{
-		s.update_next_frame(reactor_default_frame_data{ 0.01f });
+		s.update_next_frame(reactor_default_frame_data{ });
 	}
 	REQUIRE(data >= 100.0);
 }
@@ -283,7 +284,7 @@ TEST_CASE("Coroutine throws exception", "[reactor_coroutine]") {
 	auto c = exception_coroutine();
 	s.push(c);
 
-	REQUIRE_THROWS(s.update_next_frame(reactor_default_frame_data{ 0.01f }), "exception");
+	REQUIRE_THROWS(s.update_next_frame(reactor_default_frame_data{ }), "exception");
 }
 
 reactor_coroutine<> exception_coroutine1()
@@ -313,7 +314,7 @@ TEST_CASE("Coroutine throws exception inside", "[reactor_coroutine]") {
 	auto c = exception_coroutine_outer(caught);
 	s.push(c);
 
-	s.update_next_frame(reactor_default_frame_data{ 0.01f });
+	s.update_next_frame(reactor_default_frame_data{});
 
 	REQUIRE(caught == true);
 }

@@ -10,7 +10,6 @@ namespace cppcoro
 {
 	struct reactor_default_frame_data
 	{
-		float delta_time;
 	};
 
 	template <class T = reactor_default_frame_data>
