@@ -1,7 +1,7 @@
 #include "catch.hpp"
 #include <iostream>
 #include <chrono>
-#include <reactor_coroutine.hpp>
+#include "../cppreactor/reactor_coroutine.hpp"
 
 using namespace cppcoro;
 
