@@ -131,11 +131,6 @@ TEST_CASE("Coroutine speed", "[reactor_coroutine]") {
 	REQUIRE(updates_per_second > expectedMinUpdates);
 }
 
-reactor_coroutine_return<float> get_value()
-{
-	co_return 10.0f;
-}
-
 reactor_coroutine<> nested_coroutine(int& data)
 {
 	co_await next_frame{};
@@ -162,4 +157,78 @@ TEST_CASE("Coroutine nesting", "[reactor_coroutine]") {
 	REQUIRE(data == 2);
 	s.update_next_frame(reactor_default_frame_data{ 0.01f });
 	REQUIRE(data == 3);
+}
+
+reactor_coroutine_return<double> increment_value_immediate(double value, double max)
+{
+	value += 1.0;
+	if (value >= max)
+	{
+		std::cout << "returning value " << value << "\n";
+		co_return value;
+	}
+
+	auto new_value = co_await increment_value_immediate(value, max);
+
+	std::cout << "await " << new_value << " from recustive value " << value << "\n";
+	co_return new_value;
+}
+
+reactor_coroutine<> increment_until(double& value, double max)
+{
+	value = co_await increment_value_immediate(value, 100);
+}
+
+TEST_CASE("Coroutine return value", "[reactor_coroutine]") {
+
+	reactor_scheduler<> s;
+	double data = 0;
+
+	auto c = increment_until(data, 100);
+	s.push(c);
+
+	// Whole updat ein one frame since no frame suspensions
+	s.update_next_frame(reactor_default_frame_data{ 0.01f });
+	REQUIRE(data >= 100.0);
+}
+
+reactor_coroutine_return<double> increment_value_suspend(double value, double max)
+{
+	value += 1.0;
+	if (value >= max)
+	{
+		std::cout << "returning value " << value << "\n";
+		co_return value;
+	}
+
+	std::cout << "START next frame\n";
+	co_await next_frame{};
+	std::cout << "END next frame\n";
+
+
+	auto new_value = co_await increment_value_suspend(value, max);
+
+	std::cout << "await " << new_value << " from recustive value " << value << "\n";
+	co_return new_value;
+}
+
+reactor_coroutine<> increment_until_suspend(double& value, double max)
+{
+	value = co_await increment_value_suspend(value, max);
+}
+
+TEST_CASE("Coroutine return value suspended return", "[reactor_coroutine]") {
+
+	reactor_scheduler<> s;
+	double data = 0;
+
+	auto c = increment_until_suspend(data, 10);
+	s.push(c);
+
+	// Whole updat ein one frame since no frame suspensions
+	for (int i = 0; i < 101; i++)
+	{
+		s.update_next_frame(reactor_default_frame_data{ 0.01f });
+	}
+	REQUIRE(data > 100.0);
 }

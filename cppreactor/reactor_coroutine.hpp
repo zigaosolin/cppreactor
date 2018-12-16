@@ -51,15 +51,6 @@ namespace cppcoro
 				return {};
 			}
 
-			template<
-				typename U,
-				typename = std::enable_if_t<std::is_same<U, T>::value>>
-				std::experimental::suspend_always yield_value(U& value) noexcept
-			{
-				m_value = std::addressof(value);
-				return {};
-			}
-
 
 			void unhandled_exception()
 			{
@@ -114,22 +105,12 @@ namespace cppcoro
 				return {};
 			}
 
-			template<
-				typename U,
-				typename = std::enable_if_t<std::is_same<U, T>::value>>
-				std::experimental::suspend_always yield_value(U& value) noexcept
-			{
-				m_value = std::addressof(value);
-				return {};
-			}
-
-
 			void unhandled_exception()
 			{
 				m_exception = std::current_exception();
 			}
 
-			void return_value(R&& value)
+			void return_value(R value)
 			{
 				m_value = value;
 			}
@@ -434,6 +415,9 @@ namespace cppcoro
 
 	private:
 		friend class detail::reactor_coroutine_promise<T>;
+
+		template <class U, class V>
+		friend class detail::reactor_coroutine_promise_return;
 
 		std::experimental::coroutine_handle<> m_awaitingCoroutine;
 		reactor_scheduler<T>* m_scheduler;
