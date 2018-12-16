@@ -309,7 +309,7 @@ namespace cppcoro
 	class reactor_scheduler
 	{
 	public:
-		void update_next_frame(T reactor_default_frame_data)
+		void update_next_frame(T reactor_default_frame_data = T())
 		{		
 			// Sets current frame data, members with access can return it
 			m_reactor_default_frame_data = reactor_default_frame_data;
