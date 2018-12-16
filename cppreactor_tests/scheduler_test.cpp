@@ -131,6 +131,10 @@ TEST_CASE("Coroutine speed", "[reactor_coroutine]") {
 	REQUIRE(updates_per_second > expectedMinUpdates);
 }
 
+reactor_coroutine_return<float> get_value()
+{
+	co_return 10.0f;
+}
 
 reactor_coroutine<> nested_coroutine(int& data)
 {
