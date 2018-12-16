@@ -455,6 +455,9 @@ namespace cppcoro
 
 			decltype(auto) await_resume()
 			{
+				auto& promise = m_coroutine.m_coroutine.promise();
+				promise.rethrow_if_exception();
+
 				return;
 			}
 
@@ -497,6 +500,9 @@ namespace cppcoro
 			decltype(auto) await_resume()
 			{
 				auto& promise = m_coroutine.m_coroutine.promise();
+
+				promise.rethrow_if_exception();
+
 				return promise.get_value();
 			}
 

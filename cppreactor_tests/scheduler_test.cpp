@@ -267,4 +267,55 @@ TEST_CASE("Coroutine return value suspended return", "[reactor_coroutine]") {
 	REQUIRE(data >= 100.0);
 }
 
+
+reactor_coroutine<> exception_coroutine()
+{
+	throw std::exception();
+
+	co_await next_frame{};
+}
+
+TEST_CASE("Coroutine throws exception", "[reactor_coroutine]") {
+
+	reactor_scheduler<> s;
+	double data = 0;
+
+	auto c = exception_coroutine();
+	s.push(c);
+
+	REQUIRE_THROWS(s.update_next_frame(reactor_default_frame_data{ 0.01f }), "exception");
+}
+
+reactor_coroutine<> exception_coroutine1()
+{
+	throw std::exception();
+
+	co_await next_frame{};
+}
+
+reactor_coroutine<> exception_coroutine_outer(bool& caught)
+{
+	try {
+		co_await exception_coroutine1();
+	}
+	catch (std::exception ex)
+	{
+		caught = true;
+	}
+}
+
+TEST_CASE("Coroutine throws exception inside", "[reactor_coroutine]") {
+
+	reactor_scheduler<> s;
+	double data = 0;
+
+	bool caught = false;
+	auto c = exception_coroutine_outer(caught);
+	s.push(c);
+
+	s.update_next_frame(reactor_default_frame_data{ 0.01f });
+
+	REQUIRE(caught == true);
+}
+
 // TODO: exceptions
