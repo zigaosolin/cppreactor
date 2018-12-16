@@ -75,5 +75,18 @@ reactor_scheduler<> scheduler;
 scheduler.next_frame_update(frame_data);
 ```
 
+## Performance
+
+I am very pleased with the performance. For a simple infinite loop test
+```
+reactor_coroutine<> performance_test()
+{
+   for(;;)
+     co_await next_frame{};
+}
+```
+
+I am able to perform around *70M* frame updates per second. Compared to *11M* for similar setup in C#, I think this is really good.
+
 
 
