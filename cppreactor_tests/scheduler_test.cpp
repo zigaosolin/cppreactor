@@ -5,6 +5,7 @@
 
 using namespace cppcoro;
 
+
 reactor_coroutine<> single_co_await(int& iteration)
 {
 	iteration = 0;
@@ -159,24 +160,62 @@ TEST_CASE("Coroutine nesting", "[reactor_coroutine]") {
 	REQUIRE(data == 3);
 }
 
+reactor_coroutine<> coroutine_inner(int id, int id2)
+{
+	co_await next_frame{};
+}
+
+reactor_coroutine<> coroutine_outer(int id1)
+{
+	for (int i = 0; i < 3; i++)
+	{
+		co_await coroutine_inner(id1, i);
+	}
+}
+
+reactor_coroutine<> coroutine_control(bool& finished)
+{
+	for (int i = 0; i < 3; i++)
+	{
+		co_await coroutine_outer(i);
+	}
+	finished = true;
+}
+
+
+TEST_CASE("Coroutine multiple levels", "[reactor_coroutine]") {
+
+	reactor_scheduler<> s;
+	double data = 0;
+
+	bool finished = false;
+	auto c = coroutine_control(finished);
+	s.push(c);
+
+	for (int i = 0; i < 10; i++)
+	{
+		s.update_next_frame(reactor_default_frame_data{ 0.01f });
+	}
+	REQUIRE(finished == true);
+}
+
+
 reactor_coroutine_return<double> increment_value_immediate(double value, double max)
 {
 	value += 1.0;
 	if (value >= max)
 	{
-		std::cout << "returning value " << value << "\n";
 		co_return value;
 	}
 
 	auto new_value = co_await increment_value_immediate(value, max);
 
-	std::cout << "await " << new_value << " from recustive value " << value << "\n";
 	co_return new_value;
 }
 
 reactor_coroutine<> increment_until(double& value, double max)
 {
-	value = co_await increment_value_immediate(value, 100);
+	value = co_await increment_value_immediate(value, max);
 }
 
 TEST_CASE("Coroutine return value", "[reactor_coroutine]") {
@@ -197,18 +236,13 @@ reactor_coroutine_return<double> increment_value_suspend(double value, double ma
 	value += 1.0;
 	if (value >= max)
 	{
-		std::cout << "returning value " << value << "\n";
 		co_return value;
 	}
 
-	std::cout << "START next frame\n";
 	co_await next_frame{};
-	std::cout << "END next frame\n";
-
 
 	auto new_value = co_await increment_value_suspend(value, max);
 
-	std::cout << "await " << new_value << " from recustive value " << value << "\n";
 	co_return new_value;
 }
 
@@ -222,7 +256,7 @@ TEST_CASE("Coroutine return value suspended return", "[reactor_coroutine]") {
 	reactor_scheduler<> s;
 	double data = 0;
 
-	auto c = increment_until_suspend(data, 10);
+	auto c = increment_until_suspend(data, 100);
 	s.push(c);
 
 	// Whole updat ein one frame since no frame suspensions
@@ -230,5 +264,7 @@ TEST_CASE("Coroutine return value suspended return", "[reactor_coroutine]") {
 	{
 		s.update_next_frame(reactor_default_frame_data{ 0.01f });
 	}
-	REQUIRE(data > 100.0);
+	REQUIRE(data >= 100.0);
 }
+
+// TODO: exceptions

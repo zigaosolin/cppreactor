@@ -38,7 +38,10 @@ namespace cppcoro
 		class reactor_coroutine_promise
 		{
 		public:
-			reactor_coroutine_promise() = default;
+			reactor_coroutine_promise()
+				: m_awaiter(nullptr), m_scheduler(nullptr)
+			{
+			}
 
 			reactor_coroutine<T> get_return_object() noexcept;
 
@@ -59,6 +62,12 @@ namespace cppcoro
 
 			void return_void()
 			{
+				if (m_awaiter)
+				{
+					m_awaiter->m_awaitingCoroutine.resume();
+					m_awaiter = nullptr;
+				}
+				return;
 			}
 
 			template<typename U>
@@ -83,16 +92,21 @@ namespace cppcoro
 
 		private:
 			friend class reactor_coroutine<T>;
-
+			friend class coroutine_awaitable<T>;
+			
 			reactor_scheduler<T>* m_scheduler;
 			std::exception_ptr m_exception;
+			coroutine_awaitable<T>* m_awaiter;
 		};
 
 		template <class R, class T = reactor_default_frame_data>
 		class reactor_coroutine_promise_return
 		{
 		public:
-			reactor_coroutine_promise_return() = default;
+			reactor_coroutine_promise_return()
+				: m_awaiter(nullptr), m_scheduler(nullptr)
+			{
+			}
 
 			reactor_coroutine_return<R, T> get_return_object() noexcept;
 
@@ -113,6 +127,11 @@ namespace cppcoro
 			void return_value(R value)
 			{
 				m_value = value;
+				if (m_awaiter)
+				{
+					m_awaiter->m_awaitingCoroutine.resume();
+					m_awaiter = nullptr;
+				}
 			}
 
 			R get_value()
@@ -142,10 +161,12 @@ namespace cppcoro
 
 		private:
 			friend class reactor_coroutine_return<R, T>;
+			friend class coroutine_awaitable_return<R, T>;
 
 			reactor_scheduler<T>* m_scheduler;
 			std::exception_ptr m_exception;
 			R m_value;
+			coroutine_awaitable_return<R, T>* m_awaiter;
 		};
 	}
 
@@ -169,14 +190,6 @@ namespace cppcoro
 
 		reactor_coroutine(const reactor_coroutine& other) = delete;
 
-		~reactor_coroutine()
-		{
-			if (m_coroutine)
-			{
-				m_coroutine.destroy();
-			}
-		}
-
 		reactor_coroutine& operator=(reactor_coroutine other) noexcept
 		{
 			swap(other);
@@ -191,6 +204,7 @@ namespace cppcoro
 	private:
 
 		friend class detail::reactor_coroutine_promise<T>;
+		friend class detail::coroutine_awaitable<T>;
 		friend class reactor_scheduler<T>;
 
 		explicit reactor_coroutine(std::experimental::coroutine_handle<promise_type> coroutine) noexcept
@@ -243,14 +257,6 @@ namespace cppcoro
 		}
 
 		reactor_coroutine_return(const reactor_coroutine_return& other) = delete;
-
-		~reactor_coroutine_return()
-		{
-			if (m_coroutine)
-			{
-				m_coroutine.destroy();
-			}
-		}
 
 		reactor_coroutine_return& operator=(reactor_coroutine_return other) noexcept
 		{
@@ -337,12 +343,6 @@ namespace cppcoro
 	private:
 		friend class next_frame<T>;
 		friend class detail::coroutine_awaitable<T>;
-
-		bool push_and_update_inplace(reactor_coroutine<T>& coroutine)
-		{
-			coroutine.schedule(*this);
-			return coroutine.update_next_frame();
-		}
 
 		void enqueue_update(std::experimental::coroutine_handle<> handle)
 		{
@@ -443,7 +443,14 @@ namespace cppcoro
 
 			bool await_suspend(std::experimental::coroutine_handle<> awaitingCoroutine)
 			{
-				return m_scheduler->push_and_update_inplace(m_coroutine);
+				auto& promise = m_coroutine.m_coroutine.promise();
+				assert(promise.m_awaiter == nullptr);
+				promise.m_awaiter = this;
+
+				m_awaitingCoroutine = awaitingCoroutine;
+
+				m_coroutine.schedule(*m_scheduler);
+				return m_coroutine.update_next_frame();
 			}
 
 			decltype(auto) await_resume()
@@ -452,8 +459,11 @@ namespace cppcoro
 			}
 
 		private:
+			friend class reactor_coroutine_promise<T>;
+
 			reactor_coroutine<T>& m_coroutine;
 			reactor_scheduler<T>* m_scheduler;
+			std::experimental::coroutine_handle<> m_awaitingCoroutine;
 
 		};
 
@@ -474,6 +484,12 @@ namespace cppcoro
 
 			bool await_suspend(std::experimental::coroutine_handle<> awaitingCoroutine)
 			{
+				auto& promise = m_coroutine.m_coroutine.promise();
+				assert(promise.m_awaiter == nullptr);
+				promise.m_awaiter = this;
+
+				m_awaitingCoroutine = awaitingCoroutine;
+
 				m_coroutine.schedule(*m_scheduler);
 				return m_coroutine.update_next_frame();
 			}
@@ -485,9 +501,11 @@ namespace cppcoro
 			}
 
 		private:
+			friend class reactor_coroutine_promise_return<R, T>;
+
 			reactor_coroutine_return<R, T>& m_coroutine;
 			reactor_scheduler<T>* m_scheduler;
-
+			std::experimental::coroutine_handle<> m_awaitingCoroutine;
 		};
 	}
 
@@ -537,9 +555,6 @@ namespace cppcoro
 			assert(m_scheduler != nullptr);
 			return coroutine_awaitable_return<U,T>{ *m_scheduler, awaitable };
 		}
-
-
-
 
 
 		template <class R, class T>
