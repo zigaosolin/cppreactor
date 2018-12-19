@@ -66,19 +66,19 @@ struct big_frame_struct
 	int data[100];
 };
 
-reactor_coroutine<big_frame_struct*> single_co_await_big(int& iteration)
+reactor_coroutine<const big_frame_struct&> single_co_await_big(int& iteration)
 {
 	iteration = 0;
-	auto frame_data = co_await next_frame<big_frame_struct*>{};
+	auto frame_data = co_await next_frame<const big_frame_struct&>{};
 	iteration = 1;
-	REQUIRE(frame_data->data1 == 0.1f);
+	REQUIRE(frame_data.data1 == 0.1f);
 }
 
 TEST_CASE("Coroutine frame data by ref", "[reactor_coroutine]") {
 
 	big_frame_struct frame_data{ 0.05f };
 
-	reactor_scheduler<big_frame_struct*> s;
+	reactor_scheduler<const big_frame_struct&> s;
 	int iteration = -1;
 
 	// Call or push do not start it yet
@@ -88,11 +88,11 @@ TEST_CASE("Coroutine frame data by ref", "[reactor_coroutine]") {
 	REQUIRE(iteration == -1);
 
 	// First update starts it
-	s.update_next_frame(&frame_data);
+	s.update_next_frame(frame_data);
 	REQUIRE(iteration == 0);
 
 	frame_data.data1 = 0.1f;
-	s.update_next_frame(&frame_data);
+	s.update_next_frame(frame_data);
 	REQUIRE(iteration == 1);
 }
 

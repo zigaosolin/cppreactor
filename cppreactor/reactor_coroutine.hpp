@@ -305,6 +305,45 @@ namespace cppcoro
 		std::experimental::coroutine_handle<promise_type> m_coroutine;
 	};
 
+	namespace detail
+	{
+		template <class T>
+		struct reference_to_pointer
+		{
+			typedef typename T value;
+
+			value m_value;
+
+			T get()
+			{
+				return m_value;
+			}
+			
+			void set(T v)
+			{
+				m_value = v;
+			}
+		};
+
+		template <class T>
+		struct reference_to_pointer<T&>
+		{
+			typedef typename T* value;
+
+			value m_value;
+
+			T& get()
+			{
+				return *m_value;
+			}
+
+			void set(T& v)
+			{
+				m_value = &v;
+			}
+		};
+	}
+
 	template <class T>
 	class reactor_scheduler
 	{
@@ -312,7 +351,7 @@ namespace cppcoro
 		void update_next_frame(T reactor_default_frame_data = T())
 		{		
 			// Sets current frame data, members with access can return it
-			m_reactor_default_frame_data = reactor_default_frame_data;
+			m_reactor_default_frame_data.set(reactor_default_frame_data);
 
 			m_frames.swap();
 
@@ -382,7 +421,7 @@ namespace cppcoro
 		double_buffer<std::experimental::coroutine_handle<> > m_frames;
 		double_buffer<reactor_coroutine<T>*> m_start_coroutines;
 		
-		T m_reactor_default_frame_data;
+		detail::reference_to_pointer<T> m_reactor_default_frame_data;
 	};
 
 	template <class T>
@@ -409,7 +448,7 @@ namespace cppcoro
 
 		decltype(auto) await_resume()
 		{
-			return m_scheduler->m_reactor_default_frame_data;
+			return m_scheduler->m_reactor_default_frame_data.get();
 		}
 
 	private:
