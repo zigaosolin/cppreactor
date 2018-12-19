@@ -125,14 +125,14 @@ TEST_CASE("Coroutine speed", "[reactor_coroutine]") {
 	std::chrono::duration<double> duration = end - start;
 
 #ifdef _DEBUG
-	const int expectedMinUpdates = 10000; // Very low requirements for debug
+	const int expectedMinUpdates = 10'000; // Very low requirements for debug
 #else
-	const int expectedMinUpdates = 1000000; // The number is actually 80M on my comp
+	const int expectedMinUpdates = 1'000'000; // The number is actually 80M on my comp
 #endif
 
 	auto updates_per_second = loops / duration.count();
 
-	std::cout << "Coroutines updates " << updates_per_second / 1000000 << "M/s" << std::endl;
+	std::cout << "Coroutines updates " << updates_per_second / 1'000'000 << "M/s" << std::endl;
 	REQUIRE(updates_per_second > expectedMinUpdates);
 }
 
@@ -198,6 +198,7 @@ TEST_CASE("Coroutine multiple levels", "[reactor_coroutine]") {
 
 	for (int i = 0; i < 10; i++)
 	{
+		REQUIRE(finished == false);
 		s.update_next_frame();
 	}
 	REQUIRE(finished == true);
@@ -230,7 +231,7 @@ TEST_CASE("Coroutine return value", "[reactor_coroutine]") {
 	auto c = increment_until(data, 100);
 	s.push(c);
 
-	// Whole updat ein one frame since no frame suspensions
+	// Whole update in one frame since no frame suspensions
 	s.update_next_frame();
 	REQUIRE(data >= 100.0);
 }
