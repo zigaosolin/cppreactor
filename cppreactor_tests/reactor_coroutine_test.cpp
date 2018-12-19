@@ -264,7 +264,7 @@ TEST_CASE("Coroutine return value suspended return", "[reactor_coroutine]") {
 	auto c = increment_until_suspend(data, 100);
 	s.push(c);
 
-	// Whole updat ein one frame since no frame suspensions
+	// Whole update in one frame since no frame suspensions
 	for (int i = 0; i < 101; i++)
 	{
 		s.update_next_frame();
